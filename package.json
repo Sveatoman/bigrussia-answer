@@ -1,0 +1,46 @@
+{
+  "name": "bigrussia-answer",
+  "version": "1.2.0",
+  "description": "Modern Russian microtask marketplace platform with dark futuristic UI",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "reset-db": "node reset-database.js"
+  },
+  "keywords": [
+    "microtask",
+    "marketplace",
+    "russia",
+    "task-platform",
+    "freelance",
+    "reviews",
+    "farm-accounts"
+  ],
+  "author": "BigRussiaAnswer Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/bigrussia-answer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/bigrussia-answer/issues"
+  },
+  "homepage": "https://github.com/yourusername/bigrussia-answer#readme",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "ejs": "^3.1.9",
+    "sqlite3": "^5.1.6",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ-панель — BigRussiaAnswer</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body>
+  <div class="noise"></div>
+  
+  <header>
+    <nav class="navbar">
+      <a href="/" class="logo">
+        <span class="logo-white">BigRussia</span><span class="logo-blue">Answer</span>
+      </a>
+      
+      <ul class="nav-links">
+        <li><a href="/admin">Админ-панель</a></li>
+      </ul>
+      
+      <div class="nav-actions">
+        <span style="color: var(--text-gray); margin-right: 16px;">👑 <%= session.name %></span>
+        <a href="/logout" class="btn-secondary">Выход</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="admin-container">
+    <div class="container">
+      <div class="admin-header">
+        <h1>Админ-панель</h1>
+      </div>
+
+      <div class="admin-stats" id="adminStats">
+        <div class="admin-stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="activeUsers">-</div>
+          <div class="stat-label">Одобренных пользователей</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-value" id="pendingUsers">-</div>
+          <div class="stat-label">Ожидают одобрения</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-value" id="activeTasks">-</div>
+          <div class="stat-label">Активных заданий</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="todayPayouts">-</div>
+          <div class="stat-label">Выплат за сутки (₽)</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value" id="pendingSubmissions">-</div>
+          <div class="stat-label">Заданий на модерации</div>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>👥 Модерация пользователей</h2>
+        <table class="tasks-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Имя</th>
+              <th>Email</th>
+              <th>Статус</th>
+              <th>Баланс</th>
+              <th>Заданий</th>
+              <th>Дата регистрации</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Users will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="admin-section">
+        <h2>⏳ Модерация выполненных заданий</h2>
+        <div class="submissions-list" id="submissionsList">
+          <!-- Submissions will be loaded here -->
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>👥 Модерация рабочих аккаунтов</h2>
+        <div class="dashboard-tabs" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle);">
+          <button class="tab-btn active" onclick="loadWorkAccountsByStatus('pending')" style="background: transparent; border: none; color: var(--text-gray); padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s;" data-status="pending">На проверке</button>
+          <button class="tab-btn" onclick="loadWorkAccountsByStatus('approved')" style="background: transparent; border: none; color: var(--text-gray); padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s;" data-status="approved">Одобренные</button>
+          <button class="tab-btn" onclick="loadWorkAccountsByStatus('rejected')" style="background: transparent; border: none; color: var(--text-gray); padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s;" data-status="rejected">Отклоненные</button>
+        </div>
+        <div class="submissions-list" id="workAccountsList">
+          <!-- Work accounts will be loaded here -->
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>➕ Создать новое задание</h2>
+        <form class="task-form" id="createTaskForm">
+          <div class="form-group">
+            <label>Название задания</label>
+            <input type="text" name="title" required placeholder="Например: Оставить отзыв на Яндекс.Картах">
+          </div>
+          
+          <div class="form-group">
+            <label>Описание</label>
+            <textarea name="description" required placeholder="Краткое описание задания"></textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Награда (₽)</label>
+              <input type="number" name="reward" required min="10" max="500" placeholder="25">
+            </div>
+            
+            <div class="form-group">
+              <label>Время выполнения</label>
+              <input type="text" name="time_estimate" required placeholder="10–15 минут">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Количество мест</label>
+            <input type="number" name="total_slots" required min="1" max="1000" placeholder="50">
+          </div>
+          
+          <div class="form-group">
+            <label>Инструкция для исполнителей</label>
+            <textarea name="instructions" required placeholder="Подробная инструкция по выполнению задания"></textarea>
+          </div>
+          
+          <button type="submit" class="btn-primary">Создать задание</button>
+        </form>
+      </div>
+
+      <div class="admin-section">
+        <h2>📋 Все задания</h2>
+        <table class="tasks-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Название</th>
+              <th>Награда</th>
+              <th>Мест</th>
+              <th>Статус</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="tasksTableBody">
+            <!-- Tasks will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="admin-section">
+        <h2>💰 Заявки на вывод средств</h2>
+        <div id="withdrawalsList">
+          <!-- Withdrawals will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Reject Modal -->
+  <div class="modal" id="rejectModal">
+    <div class="modal-content">
+      <h3>Отклонить задание</h3>
+      <textarea id="rejectComment" placeholder="Укажите причину отклонения..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeRejectModal()">Отмена</button>
+        <button class="btn-reject" onclick="confirmReject()">Отклонить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Task Modal -->
+  <div class="modal" id="editTaskModal">
+    <div class="modal-content" style="max-width: 700px;">
+      <h3>Редактировать задание</h3>
+      <form class="task-form" id="editTaskForm">
+        <input type="hidden" id="editTaskId">
+        
+        <div class="form-group">
+          <label>Название задания</label>
+          <input type="text" id="editTitle" name="title" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Описание</label>
+          <textarea id="editDescription" name="description" required></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Награда (₽)</label>
+            <input type="number" id="editReward" name="reward" required min="10" max="500">
+          </div>
+          
+          <div class="form-group">
+            <label>Время выполнения</label>
+            <input type="text" id="editTimeEstimate" name="time_estimate" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Количество мест</label>
+          <input type="number" id="editTotalSlots" name="total_slots" required min="1" max="1000">
+        </div>
+        
+        <div class="form-group">
+          <label>Статус</label>
+          <select id="editStatus" name="status" required>
+            <option value="active">Активно</option>
+            <option value="inactive">Неактивно</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Инструкция для исполнителей</label>
+          <textarea id="editInstructions" name="instructions" required></textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Отмена</button>
+          <button type="submit" class="btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/notifications.js"></script>
+  <script>
+    let currentRejectId = null;
+
+    // Helper function to render proof images
+    function renderProofImages(proofImageData) {
+      try {
+        const images = JSON.parse(proofImageData);
+        if (!Array.isArray(images) || images.length === 0) {
+          return '<p style="color: var(--text-gray); font-size: 14px;">Скриншоты не прикреплены</p>';
+        }
+        
+        return `
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+            ${images.map(img => `
+              <div style="position: relative; width: 150px; height: 150px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="window.open('/uploads/${img}', '_blank')">
+                <img src="/uploads/${img}" style="width: 100%; height: 100%; object-fit: cover;" alt="Proof">
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (e) {
+        // Fallback for old single image format
+        return `<img src="/uploads/${proofImageData}" class="proof-image" alt="Proof" onclick="window.open('/uploads/${proofImageData}', '_blank')">`;
+      }
+    }
+
+    // Load stats
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/admin/stats');
+        const stats = await response.json();
+        
+        document.getElementById('activeUsers').textContent = stats.activeUsers.toLocaleString();
+        document.getElementById('pendingUsers').textContent = stats.pendingUsers.toLocaleString();
+        document.getElementById('activeTasks').textContent = stats.activeTasks.toLocaleString();
+        document.getElementById('todayPayouts').textContent = stats.todayPayouts.toLocaleString();
+        document.getElementById('pendingSubmissions').textContent = stats.pendingSubmissions.toLocaleString();
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    // Load submissions
+    async function loadSubmissions() {
+      try {
+        const response = await fetch('/api/admin/submissions');
+        const submissions = await response.json();
+        
+        const list = document.getElementById('submissionsList');
+        
+        if (submissions.length === 0) {
+          list.innerHTML = '<p style="text-align: center; color: var(--text-gray); padding: 40px;">Нет заданий на модерации</p>';
+          return;
+        }
+        
+        list.innerHTML = submissions.map(sub => `
+          <div class="submission-card">
+            <div class="submission-header">
+              <div class="submission-info">
+                <h3>${sub.task_title}</h3>
+                <div class="submission-meta">👤 ${sub.user_name} (${sub.user_email})</div>
+                <div class="submission-meta">📅 ${new Date(sub.submitted_at).toLocaleString('ru-RU')}</div>
+              </div>
+              <div class="submission-reward">+${sub.reward} ₽</div>
+            </div>
+            
+            <div class="submission-proof">
+              <h4>Доказательство выполнения:</h4>
+              <p>${sub.proof_text || 'Не указано'}</p>
+              ${sub.proof_image ? renderProofImages(sub.proof_image) : '<p style="color: var(--text-gray); font-size: 14px;">Скриншоты не прикреплены</p>'}
+            </div>
+            
+            <div class="submission-actions">
+              <button class="btn-approve" onclick="approveSubmission(${sub.id})">✓ Одобрить</button>
+              <button class="btn-reject" onclick="openRejectModal(${sub.id})">✗ Отклонить</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading submissions:', error);
+      }
+    }
+
+    // Approve submission
+    async function approveSubmission(id) {
+      if (!confirm('Одобрить выполнение задания?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/submissions/${id}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess('Задание одобрено, награда начислена!');
+          setTimeout(() => {
+            loadSubmissions();
+            loadStats();
+          }, 1000);
+        } else {
+          console.error('Error response:', data);
+          showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        showError('Ошибка при одобрении: ' + error.message);
+      }
+    }
+
+    // Reject modal
+    function openRejectModal(id) {
+      currentRejectId = id;
+      document.getElementById('rejectModal').classList.add('active');
+    }
+
+    function closeRejectModal() {
+      currentRejectId = null;
+      currentRejectAccountId = null;
+      document.getElementById('rejectModal').classList.remove('active');
+      document.getElementById('rejectComment').value = '';
+    }
+
+    async function confirmReject() {
+      const comment = document.getElementById('rejectComment').value;
+      
+      if (!comment.trim()) {
+        showWarning('Укажите причину отклонения');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admin/submissions/${currentRejectId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess('Задание отклонено');
+          closeRejectModal();
+          setTimeout(() => {
+            loadSubmissions();
+            loadStats();
+          }, 1000);
+        } else {
+          console.error('Error response:', data);
+          showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        showError('Ошибка при отклонении: ' + error.message);
+      }
+    }
+
+    // Create task
+    document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      
+      try {
+        const response = await fetch('/api/admin/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showSuccess('Задание создано!');
+          e.target.reset();
+          setTimeout(() => {
+            loadTasks();
+            loadStats();
+          }, 1000);
+        }
+      } catch (error) {
+        showError('Ошибка при создании задания');
+      }
+    });
+
+    // Load all tasks
+    async function loadTasks() {
+      try {
+        const response = await fetch('/api/admin/tasks');
+        const tasks = await response.json();
+        
+        const tbody = document.getElementById('tasksTableBody');
+        tbody.innerHTML = tasks.map(task => `
+          <tr>
+            <td>${task.id}</td>
+            <td>${task.title}</td>
+            <td>${task.reward} ₽</td>
+            <td>${task.remaining_slots} / ${task.total_slots}</td>
+            <td><span class="badge ${task.status}">${task.status === 'active' ? 'Активно' : 'Неактивно'}</span></td>
+            <td>
+              <button class="btn-secondary btn-small" onclick="editTask(${task.id})" style="margin-right: 8px;">✏️ Изменить</button>
+              <button class="btn-reject btn-small" onclick="deleteTask(${task.id})">🗑️ Удалить</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+      }
+    }
+
+    // Edit task
+    async function editTask(taskId) {
+      try {
+        const response = await fetch(`/api/admin/task/${taskId}`);
+        const task = await response.json();
+        
+        document.getElementById('editTaskId').value = task.id;
+        document.getElementById('editTitle').value = task.title;
+        document.getElementById('editDescription').value = task.description;
+        document.getElementById('editReward').value = task.reward;
+        document.getElementById('editTimeEstimate').value = task.time_estimate;
+        document.getElementById('editTotalSlots').value = task.total_slots;
+        document.getElementById('editStatus').value = task.status;
+        document.getElementById('editInstructions').value = task.instructions;
+        
+        document.getElementById('editTaskModal').classList.add('active');
+      } catch (error) {
+        showError('Ошибка при загрузке задания');
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editTaskModal').classList.remove('active');
+    }
+
+    document.getElementById('editTaskForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const taskId = document.getElementById('editTaskId').value;
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      
+      console.log('Submitting task update:', taskId, data);
+      
+      try {
+        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          showSuccess('Задание обновлено!');
+          closeEditModal();
+          setTimeout(() => {
+            loadTasks();
+            loadStats();
+          }, 1000);
+        } else {
+          console.error('Error response:', result);
+          showError('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        showError('Ошибка при обновлении задания: ' + error.message);
+      }
+    });
+
+    // Delete task
+    async function deleteTask(taskId) {
+      if (!confirm('Вы уверены, что хотите удалить это задание?')) return;
+      
+      console.log('Deleting task:', taskId);
+      
+      try {
+        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          showSuccess('Задание удалено!');
+          setTimeout(() => {
+            loadTasks();
+            loadStats();
+          }, 1000);
+        } else {
+          console.error('Error response:', result);
+          showWarning(result.error || 'Ошибка при удалении');
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        showError('Ошибка при удалении задания: ' + error.message);
+      }
+    }
+
+    // Load users
+    async function loadUsers() {
+      try {
+        const response = await fetch('/api/admin/users');
+        const users = await response.json();
+        
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = users.map(user => `
+          <tr>
+            <td>${user.id}</td>
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td><span class="badge ${user.account_status === 'approved' ? 'active' : user.account_status === 'pending' ? 'pending' : 'inactive'}">${getAccountStatusText(user.account_status)}</span></td>
+            <td>${user.balance.toFixed(2)} ₽</td>
+            <td>${user.tasks_completed}</td>
+            <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
+            <td>
+              ${user.account_status === 'pending' ? `
+                <button class="btn-approve btn-small" onclick="approveUser(${user.id})" style="margin-right: 8px;">✓ Одобрить</button>
+                <button class="btn-reject btn-small" onclick="rejectUser(${user.id})">✗ Отклонить</button>
+              ` : user.account_status === 'rejected' ? `
+                <button class="btn-approve btn-small" onclick="approveUser(${user.id})" style="margin-right: 8px;">✓ Одобрить</button>
+                <button class="btn-reject btn-small" onclick="deleteUser(${user.id})">🗑️ Удалить</button>
+              ` : `
+                <button class="btn-reject btn-small" onclick="rejectUser(${user.id})" style="margin-right: 8px;">✗ Заблокировать</button>
+                <button class="btn-reject btn-small" onclick="deleteUser(${user.id})">🗑️ Удалить</button>
+              `}
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    }
+
+    function getAccountStatusText(status) {
+      const statuses = {
+        'pending': 'Ожидает',
+        'approved': 'Одобрен',
+        'rejected': 'Отклонен'
+      };
+      return statuses[status] || status;
+    }
+
+    async function approveUser(userId) {
+      if (!confirm('Одобрить пользователя?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/approve`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess('Пользователь одобрен!');
+          loadUsers();
+          loadStats();
+        } else {
+          showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        showError('Ошибка при одобрении: ' + error.message);
+      }
+    }
+
+    async function rejectUser(userId) {
+      if (!confirm('Отклонить/заблокировать пользователя?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/reject`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess('Пользователь отклонен/заблокирован!');
+          loadUsers();
+          loadStats();
+        } else {
+          showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        showError('Ошибка при отклонении: ' + error.message);
+      }
+    }
+
+    async function deleteUser(userId) {
+      if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess('Пользователь удален!');
+          loadUsers();
+          loadStats();
+        } else {
+          showError(data.error || 'Ошибка при удалении');
+        }
+      } catch (error) {
+        showError('Ошибка при удалении: ' + error.message);
+      }
+    }
+
+    // Load withdrawals
+    async function loadWithdrawals() {
+      try {
+        const response = await fetch('/api/admin/withdrawals');
+        const withdrawals = await response.json();
+        
+        const list = document.getElementById('withdrawalsList');
+        
+        if (withdrawals.length === 0) {
+          list.innerHTML = '<p style="text-align: center; color: var(--text-gray); padding: 40px;">Нет заявок на вывод</p>';
+          return;
+        }
+        
+        list.innerHTML = withdrawals.map(w => `
+          <div class="submission-card">
+            <div class="submission-header">
+              <div class="submission-info">
+                <h3>${w.amount} ₽ — ${getMethodName(w.method)}</h3>
+                <div class="submission-meta">👤 ${w.user_name} (${w.user_email})</div>
+                <div class="submission-meta">📅 ${new Date(w.created_at).toLocaleString('ru-RU')}</div>
+                <div class="submission-meta">💳 Реквизиты: ${w.details}</div>
+              </div>
+              <span class="task-status ${w.status}">${getWithdrawalStatusText(w.status)}</span>
+            </div>
+            
+            ${w.status === 'pending' ? `
+              <div class="submission-actions">
+                <button class="btn-approve" onclick="approveWithdrawal(${w.id})">✓ Выплатить</button>
+                <button class="btn-reject" onclick="rejectWithdrawal(${w.id})">✗ Отклонить</button>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading withdrawals:', error);
+      }
+    }
+
+    function getMethodName(method) {
+      const methods = {
+        'card': 'Карта РФ',
+        'sbp': 'СБП',
+        'yoomoney': 'ЮMoney'
+      };
+      return methods[method] || method;
+    }
+
+    function getWithdrawalStatusText(status) {
+      const statuses = {
+        'pending': 'На проверке',
+        'approved': 'Выплачено',
+        'rejected': 'Отклонено'
+      };
+      return statuses[status] || status;
+    }
+
+    async function approveWithdrawal(id) {
+      if (!confirm('Подтвердить выплату?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/withdrawals/${id}/approve`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Выплата подтверждена!');
+          setTimeout(() => {
+            loadWithdrawals();
+            loadStats();
+          }, 1000);
+        }
+      } catch (error) {
+        showError('Ошибка при подтверждении выплаты');
+      }
+    }
+
+    async function rejectWithdrawal(id) {
+      if (!confirm('Отклонить заявку на вывод? Средства вернутся на баланс пользователя.')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/withdrawals/${id}/reject`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Заявка отклонена, средства возвращены на баланс');
+          setTimeout(() => {
+            loadWithdrawals();
+            loadStats();
+          }, 1000);
+        }
+      } catch (error) {
+        showError('Ошибка при отклонении заявки');
+      }
+    }
+
+    // Initial load
+    loadStats();
+    loadSubmissions();
+    loadTasks();
+    loadWithdrawals();
+    loadWorkAccountsByStatus('pending');
+
+    // Load work accounts by status
+    let currentAccountStatus = 'pending';
+    
+    async function loadWorkAccountsByStatus(status) {
+      currentAccountStatus = status;
+      
+      // Update active tab
+      document.querySelectorAll('[data-status]').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.status === status) {
+          btn.classList.add('active');
+        }
+      });
+      
+      try {
+        const response = await fetch(`/api/admin/work-accounts?status=${status}`);
+        const accounts = await response.json();
+        
+        const list = document.getElementById('workAccountsList');
+        
+        if (accounts.length === 0) {
+          list.innerHTML = '<p style="text-align: center; color: var(--text-gray); padding: 40px;">Нет аккаунтов в этом статусе</p>';
+          return;
+        }
+        
+        list.innerHTML = accounts.map(acc => `
+          <div class="submission-card">
+            <div class="submission-header">
+              <div class="submission-info">
+                <h3>${acc.platform} — ${acc.account_name}</h3>
+                <div class="submission-meta">👤 ${acc.user_name} (${acc.user_email})</div>
+                <div class="submission-meta">📅 ${new Date(acc.created_at).toLocaleString('ru-RU')}</div>
+                <div class="submission-meta">🔗 <a href="${acc.account_link}" target="_blank" style="color: var(--primary-blue);">Открыть профиль</a></div>
+              </div>
+              <span class="task-status ${acc.status}">${getAccountStatusText(acc.status)}</span>
+            </div>
+            
+            ${acc.proof_text ? `
+              <div class="submission-proof">
+                <h4>Дополнительная информация:</h4>
+                <p>${acc.proof_text}</p>
+              </div>
+            ` : ''}
+            
+            ${acc.screenshot ? `
+              <div style="margin: 16px 0;">
+                <h4 style="font-size: 14px; color: var(--text-gray); margin-bottom: 8px;">Скриншот профиля:</h4>
+                <img src="/uploads/${acc.screenshot}" class="proof-image" alt="Screenshot" onclick="window.open('/uploads/${acc.screenshot}', '_blank')">
+              </div>
+            ` : ''}
+            
+            ${acc.admin_comment ? `
+              <div class="admin-comment">
+                <strong>Комментарий модератора:</strong><br>${acc.admin_comment}
+              </div>
+            ` : ''}
+            
+            ${acc.status === 'pending' ? `
+              <div class="submission-actions">
+                <button class="btn-approve" onclick="approveWorkAccount(${acc.id})">✓ Одобрить</button>
+                <button class="btn-reject" onclick="openRejectAccountModal(${acc.id})">✗ Отклонить</button>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading work accounts:', error);
+      }
+    }
+
+    function getAccountStatusText(status) {
+      const statuses = {
+        'pending': 'На проверке',
+        'approved': 'Одобрен',
+        'rejected': 'Отклонен'
+      };
+      return statuses[status] || status;
+    }
+
+    async function approveWorkAccount(accountId) {
+      if (!confirm('Одобрить этот аккаунт?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/work-accounts/${accountId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess('Аккаунт одобрен!');
+          setTimeout(() => loadWorkAccountsByStatus(currentAccountStatus), 1000);
+        } else {
+          showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        showError('Ошибка при одобрении: ' + error.message);
+      }
+    }
+
+    let currentRejectAccountId = null;
+
+    function openRejectAccountModal(accountId) {
+      currentRejectAccountId = accountId;
+      document.getElementById('rejectComment').value = '';
+      document.getElementById('rejectModal').classList.add('active');
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      loadStats();
+      loadSubmissions();
+      loadWithdrawals();
+      loadWorkAccountsByStatus(currentAccountStatus);
+    }, 30000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BigRussiaAnswer — Биржа микрозадач</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body>
+  <div class="noise"></div>
+  
+  <header>
+    <nav class="navbar">
+      <a href="/" class="logo">
+        <span class="logo-white">BigRussia</span><span class="logo-blue">Answer</span>
+      </a>
+      
+      <ul class="nav-links">
+        <li><a href="/">Главная</a></li>
+        <li><a href="#tasks">Задания</a></li>
+        <li><a href="#partners">Партнёрам</a></li>
+      </ul>
+      
+      <div class="nav-actions">
+        <% if (user) { %>
+          <a href="/dashboard" class="btn-primary">Личный кабинет</a>
+          <a href="/logout" class="btn-secondary">Выход</a>
+        <% } else { %>
+          <a href="/login" class="btn-secondary">Войти</a>
+          <a href="/register" class="btn-primary">Регистрация</a>
+        <% } %>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <h1>
+          Биржа реальных<br>
+          <span class="gradient-text">микрозадач</span> в России
+        </h1>
+        <p>
+          Выполняй простые задания, получай честную оплату.<br>
+          Мгновенная проверка. Вывод от 50 ₽.
+        </p>
+        <div class="hero-buttons">
+          <a href="#tasks" class="btn-primary">Смотреть задания</a>
+          <button onclick="showHowItWorks()" class="btn-secondary">Как это работает</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tasks-section" id="tasks">
+      <div class="container">
+        <h2 class="section-title">Актуальные задания на написание отзывов</h2>
+
+        <div class="tasks-grid" id="tasksGrid">
+          <!-- Tasks will be loaded here -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/notifications.js"></script>
+  <script>
+    const instructionsUrl = '<%= process.env.INSTRUCTIONS_URL || "" %>';
+    
+    // Show how it works
+    function showHowItWorks() {
+      showInfo(`🎯 Как это работает:\n\n1️⃣ Зарегистрируйтесь на платформе\n2️⃣ Выберите задание из списка\n3️⃣ Выполните задание по инструкции\n4️⃣ Отправьте отчет с доказательствами\n5️⃣ Дождитесь проверки модератором\n6️⃣ Получите награду на баланс\n7️⃣ Выводите средства от 50 ₽\n\n💰 Честная оплата за каждое задание!\n⚡ Быстрая проверка модераторами!\n✅ Вывод на карту, СБП или ЮMoney!`, 10000);
+    }
+
+    // Load tasks
+    async function loadTasks() {
+      try {
+        const response = await fetch('/api/tasks');
+        const tasks = await response.json();
+        
+        const grid = document.getElementById('tasksGrid');
+        
+        if (tasks.length === 0) {
+          grid.innerHTML = '<p style="text-align: center; color: var(--text-gray); padding: 40px; grid-column: 1/-1;">Нет доступных заданий</p>';
+          return;
+        }
+        
+        grid.innerHTML = tasks.map(task => `
+          <div class="task-card">
+            <h3 class="task-title">${task.title}</h3>
+            <p class="task-description">${task.description}</p>
+            <div class="task-meta">
+              <div class="task-reward">+${task.reward} ₽</div>
+              <div class="task-info">
+                <span>⏱ ${task.time_estimate}</span>
+                <span>👥 ${task.remaining_slots} мест</span>
+              </div>
+            </div>
+            <% if (user) { %>
+              <button class="btn-primary" onclick="takeTask(${task.id})">Взять →</button>
+            <% } else { %>
+              <a href="/login" class="btn-primary">Войти чтобы взять →</a>
+            <% } %>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        showError('Ошибка загрузки заданий');
+      }
+    }
+
+    async function takeTask(taskId) {
+      // First, check if user has approved accounts
+      try {
+        const accountsResponse = await fetch('/api/available-work-accounts');
+        const accounts = await accountsResponse.json();
+        
+        const availableAccounts = accounts.filter(acc => acc.isAvailable);
+        
+        if (accounts.length === 0) {
+          showWarning('У вас нет одобренных рабочих аккаунтов. Добавьте аккаунты в личном кабинете.');
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
+          return;
+        }
+        
+        if (availableAccounts.length === 0) {
+          const nextAvailable = accounts[0];
+          showWarning(`Все аккаунты в кулдауне. Следующий доступен через ${nextAvailable.cooldownHoursLeft} ч.`);
+          return;
+        }
+        
+        // Show account selection
+        const accountOptions = availableAccounts.map(acc => 
+          `<option value="${acc.id}">${acc.platform} - ${acc.account_name}</option>`
+        ).join('');
+        
+        const accountSelect = `
+          <div style="margin: 20px 0;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text-gray);">Выберите аккаунт для выполнения:</label>
+            <select id="accountSelect" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--card-bg); color: var(--text-light); border: 1px solid var(--border-subtle);">
+              ${accountOptions}
+            </select>
+            <p style="color: var(--text-gray); font-size: 13px; margin-top: 8px;">
+              ⏱ После взятия задания аккаунт уйдет в кулдаун на 36-48 часов
+            </p>
+          </div>
+        `;
+        
+        // Create custom modal
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+        modal.innerHTML = `
+          <div style="background: var(--card-bg); border-radius: 16px; padding: 32px; max-width: 500px; width: 90%; border: 1px solid var(--border-subtle);">
+            <h3 style="margin-bottom: 16px;">Взять задание</h3>
+            ${accountSelect}
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+              <button onclick="this.closest('div').parentElement.parentElement.remove()" class="btn-secondary" style="flex: 1;">Отмена</button>
+              <button onclick="confirmTakeTask(${taskId})" class="btn-primary" style="flex: 1;">Взять задание</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        
+      } catch (error) {
+        showError('Ошибка при загрузке аккаунтов');
+      }
+    }
+
+    async function confirmTakeTask(taskId) {
+      const accountSelect = document.getElementById('accountSelect');
+      const workAccountId = accountSelect.value;
+      
+      // Remove modal
+      accountSelect.closest('div').parentElement.parentElement.remove();
+      
+      try {
+        const response = await fetch(`/api/tasks/${taskId}/take`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ work_account_id: workAccountId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess(`Задание взято! Аккаунт в кулдауне на ${data.cooldownHours} ч.`);
+          
+          // Show instructions if URL is set
+          if (instructionsUrl) {
+            setTimeout(() => {
+              showInfo(`📖 Инструкция по выполнению: <a href="${instructionsUrl}" target="_blank" style="color: var(--primary-blue); text-decoration: underline;">Открыть</a>`, 8000);
+            }, 1000);
+          }
+          
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
+        } else {
+          showError(data.error || 'Ошибка при взятии задания');
+        }
+      } catch (error) {
+        showError('Ошибка при взятии задания');
+      }
+    }
+
+    // Load tasks on page load
+    loadTasks();
+  </script>
+</body>
+</html>
