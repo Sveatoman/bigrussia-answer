@@ -167,6 +167,15 @@ app.post('/login', (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
+  const userId = req.session.userId;
+  
+  // Очищаем IP при выходе, чтобы отключить автовход
+  if (userId) {
+    db.run('UPDATE users SET last_ip = NULL WHERE id = ?', [userId], (err) => {
+      if (err) console.error('Error clearing IP:', err);
+    });
+  }
+  
   req.session.destroy((err) => {
     if (err) {
       console.error('Logout error:', err);
