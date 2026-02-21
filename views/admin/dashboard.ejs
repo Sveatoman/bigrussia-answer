@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Админ-панель — BigRussiaAnswer</title>
+  <title>Админ-панель — YanFarm</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin.css">
   <link rel="stylesheet" href="/css/notifications.css">
@@ -14,7 +14,7 @@
   <header>
     <nav class="navbar">
       <a href="/" class="logo">
-        <span class="logo-white">BigRussia</span><span class="logo-blue">Answer</span>
+        <span class="logo-white">Yan</span><span class="logo-blue">Farm</span>
       </a>
       
       <ul class="nav-links">
@@ -23,7 +23,7 @@
       
       <div class="nav-actions">
         <span style="color: var(--text-gray); margin-right: 16px;">👑 <%= session.name %></span>
-        <a href="/logout" class="btn-secondary">Выход</a>
+        <button onclick="logout()" class="btn-secondary" style="cursor: pointer;">Выход</button>
       </div>
     </nav>
   </header>
@@ -876,6 +876,18 @@
       loadWithdrawals();
       loadWorkAccountsByStatus(currentAccountStatus);
     }, 30000);
+
+    // Logout function
+    function logout() {
+      window.location.href = '/logout';
+    }
   </script>
+
+  <footer style="background: rgba(10, 15, 24, 0.8); backdrop-filter: blur(10px); border-top: 1px solid var(--border-subtle); padding: 24px 0; margin-top: 60px;">
+    <div class="container" style="text-align: center; color: var(--text-gray); font-size: 14px;">
+      <p style="margin: 0; opacity: 0.7;">© 2024 YanFarm Admin Panel</p>
+    </div>
+  </footer>
 </body>
+</html>
 </html>

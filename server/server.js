@@ -57,13 +57,23 @@ app.get('/', (req, res) => {
       
       res.render('index', { 
         user: req.session.userId ? req.session : null,
-        process: { env: { INSTRUCTIONS_URL: process.env.INSTRUCTIONS_URL } }
+        process: { 
+          env: { 
+            INSTRUCTIONS_URL: process.env.INSTRUCTIONS_URL,
+            SUPPORT_TELEGRAM: process.env.SUPPORT_TELEGRAM
+          } 
+        }
       });
     });
   } else {
     res.render('index', { 
       user: req.session.userId ? req.session : null,
-      process: { env: { INSTRUCTIONS_URL: process.env.INSTRUCTIONS_URL } }
+      process: { 
+        env: { 
+          INSTRUCTIONS_URL: process.env.INSTRUCTIONS_URL,
+          SUPPORT_TELEGRAM: process.env.SUPPORT_TELEGRAM
+        } 
+      }
     });
   }
 });
@@ -157,8 +167,12 @@ app.post('/login', (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+    }
+    res.redirect('/');
+  });
 });
 
 app.get('/dashboard', requireAuth, (req, res) => {
@@ -176,7 +190,12 @@ app.get('/dashboard', requireAuth, (req, res) => {
         res.render('dashboard', { 
           user: { ...user, today_earned: todayData?.today_earned || 0 },
           session: req.session,
-          process: { env: { ACCOUNT_INSTRUCTIONS_URL: process.env.ACCOUNT_INSTRUCTIONS_URL } }
+          process: { 
+            env: { 
+              ACCOUNT_INSTRUCTIONS_URL: process.env.ACCOUNT_INSTRUCTIONS_URL,
+              SUPPORT_TELEGRAM: process.env.SUPPORT_TELEGRAM
+            } 
+          }
         });
       }
     );
@@ -809,7 +828,7 @@ app.get('/api/available-work-accounts', requireAuth, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 BigRussiaAnswer server running on http://localhost:${PORT}`);
+  console.log(`\n🚀 YanFarm server running on http://localhost:${PORT}`);
   console.log(`📊 Admin panel: http://localhost:${PORT}/admin`);
-  console.log(`🔐 Default admin: admin@bigrussia.ru / admin123\n`);
+  console.log(`🔐 Default admin: ${process.env.ADMIN_EMAIL || 'admin@yanfarm.pro'} / ${process.env.ADMIN_PASSWORD || 'admin123'}\n`);
 });
