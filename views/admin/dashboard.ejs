@@ -23,7 +23,7 @@
       
       <div class="nav-actions">
         <span style="color: var(--text-gray); margin-right: 16px;">👑 <%= session.name %></span>
-        <button onclick="logout()" class="btn-secondary" style="cursor: pointer;">Выход</button>
+        <a href="/logout" class="btn-secondary" style="text-decoration: none;">Выход</a>
       </div>
     </nav>
   </header>
@@ -876,11 +876,6 @@
       loadWithdrawals();
       loadWorkAccountsByStatus(currentAccountStatus);
     }, 30000);
-
-    // Logout function
-    function logout() {
-      window.location.href = '/logout';
-    }
   </script>
 
   <footer style="background: rgba(10, 15, 24, 0.8); backdrop-filter: blur(10px); border-top: 1px solid var(--border-subtle); padding: 24px 0; margin-top: 60px;">
