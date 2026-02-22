@@ -23,6 +23,10 @@ db.serialize(() => {
     level TEXT DEFAULT 'Стандарт',
     tasks_completed INTEGER DEFAULT 0,
     total_earned REAL DEFAULT 0,
+    referral_code TEXT UNIQUE,
+    referred_by INTEGER,
+    referral_earnings REAL DEFAULT 0,
+    referrals_count INTEGER DEFAULT 0,
     last_ip TEXT,
     last_login DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -34,6 +38,7 @@ db.serialize(() => {
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     reward REAL NOT NULL,
+    referral_reward REAL DEFAULT 0,
     time_estimate TEXT NOT NULL,
     total_slots INTEGER NOT NULL,
     remaining_slots INTEGER NOT NULL,
@@ -95,13 +100,15 @@ db.serialize(() => {
   // Create default admin user
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@bidrussia.ru';
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const crypto = require('crypto');
   
   db.get('SELECT id FROM users WHERE role = ?', ['admin'], (err, row) => {
     if (!row) {
+      const adminReferralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
       bcrypt.hash(adminPassword, 10, (err, hash) => {
         db.run(
-          'INSERT INTO users (email, password, name, role, balance) VALUES (?, ?, ?, ?, ?)',
-          [adminEmail, hash, 'Администратор', 'admin', 0],
+          'INSERT INTO users (email, password, name, role, balance, referral_code) VALUES (?, ?, ?, ?, ?, ?)',
+          [adminEmail, hash, 'Администратор', 'admin', 0, adminReferralCode],
           (err) => {
             if (!err) console.log('✓ Admin user created');
           }

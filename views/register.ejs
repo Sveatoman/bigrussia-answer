@@ -45,11 +45,20 @@
   <script>
     const instructionsUrl = '<%= process.env.INSTRUCTIONS_URL || "" %>';
     
+    // Get referral code from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const formData = new FormData(e.target);
       const data = Object.fromEntries(formData);
+      
+      // Add referral code if exists
+      if (refCode) {
+        data.ref = refCode;
+      }
       
       try {
         const response = await fetch('/register', {

@@ -114,18 +114,39 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, ref } = req.body;
   const clientIp = getClientIp(req);
+  const crypto = require('crypto');
+  const referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
   
   try {
     const hash = await bcrypt.hash(password, 10);
+    
+    // Check if referral code exists
+    let referrerId = null;
+    if (ref) {
+      const referrer = await new Promise((resolve, reject) => {
+        db.get('SELECT id FROM users WHERE referral_code = ?', [ref], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+      if (referrer) referrerId = referrer.id;
+    }
+    
     db.run(
-      'INSERT INTO users (email, password, name, last_ip, last_login) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
-      [email, hash, name, clientIp],
+      'INSERT INTO users (email, password, name, last_ip, last_login, referral_code, referred_by) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
+      [email, hash, name, clientIp, referralCode, referrerId],
       function(err) {
         if (err) {
           return res.status(400).json({ error: 'Email уже используется' });
         }
+        
+        // Update referrer's count
+        if (referrerId) {
+          db.run('UPDATE users SET referrals_count = referrals_count + 1 WHERE id = ?', [referrerId]);
+        }
+        
         req.session.userId = this.lastID;
         req.session.email = email;
         req.session.name = name;
@@ -400,7 +421,7 @@ app.post('/api/admin/submissions/:id/approve', requireAdmin, (req, res) => {
   
   console.log('Approving submission:', submissionId);
   
-  db.get('SELECT s.*, t.reward FROM submissions s JOIN tasks t ON s.task_id = t.id WHERE s.id = ?', [submissionId], (err, submission) => {
+  db.get('SELECT s.*, t.reward, t.referral_reward FROM submissions s JOIN tasks t ON s.task_id = t.id WHERE s.id = ?', [submissionId], (err, submission) => {
     if (err) {
       console.error('Error fetching submission:', err);
       return res.status(500).json({ error: err.message });
@@ -432,7 +453,33 @@ app.post('/api/admin/submissions/:id/approve', requireAdmin, (req, res) => {
               return res.status(500).json({ error: err.message });
             }
             console.log('Submission approved successfully');
-            res.json({ success: true });
+            
+            // Check if user has a referrer and pay referral bonus
+            db.get('SELECT referred_by FROM users WHERE id = ?', [submission.user_id], (err, user) => {
+              if (err) {
+                console.error('Error checking referrer:', err);
+                return res.json({ success: true });
+              }
+              
+              if (user && user.referred_by && submission.referral_reward > 0) {
+                console.log('Paying referral bonus to user:', user.referred_by, 'amount:', submission.referral_reward);
+                
+                db.run(
+                  'UPDATE users SET balance = balance + ?, referral_earnings = referral_earnings + ? WHERE id = ?',
+                  [submission.referral_reward, submission.referral_reward, user.referred_by],
+                  (err) => {
+                    if (err) {
+                      console.error('Error paying referral bonus:', err);
+                    } else {
+                      console.log('Referral bonus paid successfully');
+                    }
+                    res.json({ success: true });
+                  }
+                );
+              } else {
+                res.json({ success: true });
+              }
+            });
           }
         );
       }
@@ -475,11 +522,11 @@ app.post('/api/admin/submissions/:id/reject', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/tasks', requireAdmin, (req, res) => {
-  const { title, description, reward, time_estimate, total_slots, instructions } = req.body;
+  const { title, description, reward, time_estimate, total_slots, instructions, referral_reward } = req.body;
   
   db.run(
-    'INSERT INTO tasks (title, description, reward, time_estimate, total_slots, remaining_slots, instructions, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [title, description, reward, time_estimate, total_slots, total_slots, instructions, req.session.userId],
+    'INSERT INTO tasks (title, description, reward, time_estimate, total_slots, remaining_slots, instructions, referral_reward, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [title, description, reward, time_estimate, total_slots, total_slots, instructions, referral_reward || 0, req.session.userId],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true, taskId: this.lastID });
@@ -496,13 +543,13 @@ app.get('/api/admin/tasks', requireAdmin, (req, res) => {
 
 app.put('/api/admin/tasks/:id', requireAdmin, (req, res) => {
   const taskId = req.params.id;
-  const { title, description, reward, time_estimate, total_slots, instructions, status } = req.body;
+  const { title, description, reward, time_estimate, total_slots, instructions, status, referral_reward } = req.body;
   
   console.log('Updating task:', taskId, req.body);
   
   db.run(
-    'UPDATE tasks SET title = ?, description = ?, reward = ?, time_estimate = ?, total_slots = ?, instructions = ?, status = ? WHERE id = ?',
-    [title, description, reward, time_estimate, total_slots, instructions, status, taskId],
+    'UPDATE tasks SET title = ?, description = ?, reward = ?, time_estimate = ?, total_slots = ?, instructions = ?, status = ?, referral_reward = ? WHERE id = ?',
+    [title, description, reward, time_estimate, total_slots, instructions, status, referral_reward || 0, taskId],
     function(err) {
       if (err) {
         console.error('Error updating task:', err);
@@ -832,6 +879,38 @@ app.get('/api/available-work-accounts', requireAuth, (req, res) => {
       });
       
       res.json(accountsWithCooldown);
+    }
+  );
+});
+
+// Partners/Referral routes
+app.get('/partners', (req, res) => {
+  if (req.session.userId) {
+    db.get('SELECT * FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+      if (err || !user) return res.redirect('/login');
+      
+      const referralLink = `${req.protocol}://${req.get('host')}/register?ref=${user.referral_code}`;
+      
+      res.render('partners', {
+        user: user,
+        referralLink: referralLink
+      });
+    });
+  } else {
+    res.render('partners', {
+      user: null,
+      referralLink: null
+    });
+  }
+});
+
+app.get('/api/my-referrals', requireAuth, (req, res) => {
+  db.all(
+    'SELECT id, name, email, tasks_completed, created_at FROM users WHERE referred_by = ? ORDER BY created_at DESC',
+    [req.session.userId],
+    (err, referrals) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(referrals);
     }
   );
 });
