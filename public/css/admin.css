@@ -347,3 +347,83 @@ select:focus {
   border-color: var(--primary-blue) !important;
   box-shadow: 0 0 0 3px rgba(47, 128, 255, 0.1);
 }
+
+/* Tab buttons */
+.dashboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-gray);
+  padding: 12px 24px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.tab-btn:hover {
+  color: var(--text-light);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-btn.active {
+  color: var(--primary-blue);
+  border-bottom-color: var(--primary-blue);
+}
+
+/* Badge styles for different statuses */
+.badge.pending {
+  background: rgba(241, 196, 15, 0.1);
+  color: #F1C40F;
+}
+
+.task-status {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.task-status.pending {
+  background: rgba(241, 196, 15, 0.1);
+  color: #F1C40F;
+}
+
+.task-status.approved {
+  background: rgba(39, 174, 96, 0.1);
+  color: var(--success-green);
+}
+
+.task-status.rejected {
+  background: rgba(231, 76, 60, 0.1);
+  color: #E74C3C;
+}
+
+/* Admin comment box */
+.admin-comment {
+  background: rgba(231, 76, 60, 0.05);
+  border-left: 3px solid #E74C3C;
+  padding: 12px;
+  margin-top: 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--text-gray);
+}
+
+.admin-comment strong {
+  color: var(--text-light);
+}
+
+/* Button small variant */
+.btn-small {
+  padding: 6px 12px;
+  font-size: 14px;
+}
