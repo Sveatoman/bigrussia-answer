@@ -389,29 +389,56 @@
         return;
       }
       
-      try {
-        const response = await fetch(`/api/admin/submissions/${currentRejectId}/reject`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ comment })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          showSuccess('Задание отклонено');
-          closeRejectModal();
-          setTimeout(() => {
-            loadSubmissions();
-            loadStats();
-          }, 1000);
-        } else {
-          console.error('Error response:', data);
-          showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+      // Check if we're rejecting a submission or work account
+      if (currentRejectAccountId) {
+        // Rejecting work account
+        try {
+          const response = await fetch(`/api/admin/work-accounts/${currentRejectAccountId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            showSuccess('Аккаунт отклонён');
+            closeRejectModal();
+            setTimeout(() => loadWorkAccountsByStatus(currentAccountStatus), 1000);
+          } else {
+            console.error('Error response:', data);
+            showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+          }
+        } catch (error) {
+          console.error('Fetch error:', error);
+          showError('Ошибка при отклонении: ' + error.message);
         }
-      } catch (error) {
-        console.error('Fetch error:', error);
-        showError('Ошибка при отклонении: ' + error.message);
+      } else if (currentRejectId) {
+        // Rejecting submission
+        try {
+          const response = await fetch(`/api/admin/submissions/${currentRejectId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            showSuccess('Задание отклонено');
+            closeRejectModal();
+            setTimeout(() => {
+              loadSubmissions();
+              loadStats();
+            }, 1000);
+          } else {
+            console.error('Error response:', data);
+            showError('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+          }
+        } catch (error) {
+          console.error('Fetch error:', error);
+          showError('Ошибка при отклонении: ' + error.message);
+        }
       }
     }
 
@@ -774,6 +801,7 @@
     loadStats();
     loadSubmissions();
     loadTasks();
+    loadUsers();
     loadWithdrawals();
     loadWorkAccountsByStatus('pending');
 
@@ -793,7 +821,15 @@
       
       try {
         const response = await fetch(`/api/admin/work-accounts?status=${status}`);
+        
+        if (!response.ok) {
+          console.error('Error response:', response.status, response.statusText);
+          showError('Ошибка загрузки аккаунтов');
+          return;
+        }
+        
         const accounts = await response.json();
+        console.log('Loaded work accounts:', accounts.length, 'with status:', status);
         
         const list = document.getElementById('workAccountsList');
         
@@ -844,6 +880,7 @@
         `).join('');
       } catch (error) {
         console.error('Error loading work accounts:', error);
+        showError('Ошибка загрузки аккаунтов: ' + error.message);
       }
     }
 
