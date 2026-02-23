@@ -341,10 +341,17 @@ app.post('/api/submissions/:id/submit', requireAuth, upload.array('proof_images'
   const proof_images = req.files ? JSON.stringify(req.files.map(f => f.filename)) : '[]';
   
   db.run(
-    'UPDATE submissions SET proof_text = ?, proof_image = ?, status = "pending" WHERE id = ? AND user_id = ?',
+    `UPDATE submissions 
+     SET proof_text = ?, proof_image = ?, status = "pending", submitted_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND user_id = ? AND status IN ("taken", "rejected")`,
     [proof_text, proof_images, submissionId, req.session.userId],
-    (err) => {
+    function(err) {
       if (err) return res.status(500).json({ error: err.message });
+
+      if (this.changes === 0) {
+        return res.status(400).json({ error: 'Отчет можно отправить только для взятых или отклоненных заданий' });
+      }
+
       res.json({ success: true });
     }
   );

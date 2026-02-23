@@ -246,7 +246,7 @@
               Награда: +${task.reward} ₽
             </div>
             
-            ${task.status === null || task.status === 'rejected' ? `
+            ${task.status === 'taken' || task.status === null || task.status === 'rejected' ? `
               <form class="submission-form" onsubmit="submitTask(event, ${task.id})" id="form-${task.id}">
                 <textarea name="proof_text" placeholder="Опишите выполнение задания, вставьте ссылки..." required></textarea>
                 
@@ -387,6 +387,7 @@
 
     function getStatusText(status) {
       const statuses = {
+        'taken': 'Взято в работу',
         'pending': 'На проверке',
         'approved': 'Одобрено',
         'rejected': 'Отклонено',
