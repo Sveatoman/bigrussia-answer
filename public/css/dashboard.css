@@ -124,9 +124,9 @@
   font-weight: 600;
 }
 
-.task-status.pending {
-  background: rgba(255, 193, 7, 0.1);
-  color: #FFC107;
+.task-status.taken {
+  background: rgba(47, 128, 255, 0.1);
+  color: var(--primary-blue);
 }
 
 .task-status.pending {

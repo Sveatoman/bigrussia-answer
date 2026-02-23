@@ -275,19 +275,19 @@ app.post('/api/tasks/:id/take', requireAuth, (req, res) => {
         }
       }
       
-      // Check if user already has pending/approved submission for this task
+      // Check if user already has taken/pending/approved submission for this task
       db.get(
-        'SELECT * FROM submissions WHERE task_id = ? AND user_id = ? AND status IN ("pending", "approved")',
+        'SELECT * FROM submissions WHERE task_id = ? AND user_id = ? AND status IN ("taken", "pending", "approved")',
         [taskId, req.session.userId],
         (err, existing) => {
           if (existing) {
             return res.status(400).json({ error: 'Вы уже взяли это задание' });
           }
           
-          // Create submission with work account
+          // Create submission with work account and status 'taken'
           db.run(
-            'INSERT INTO submissions (task_id, user_id, work_account_id) VALUES (?, ?, ?)',
-            [taskId, req.session.userId, work_account_id],
+            'INSERT INTO submissions (task_id, user_id, work_account_id, status) VALUES (?, ?, ?, ?)',
+            [taskId, req.session.userId, work_account_id, 'taken'],
             function(err) {
               if (err) return res.status(500).json({ error: err.message });
               
