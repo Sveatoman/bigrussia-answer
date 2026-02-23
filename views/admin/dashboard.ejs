@@ -599,7 +599,7 @@
             <td>${user.id}</td>
             <td>${user.name}</td>
             <td>${user.email}</td>
-            <td><span class="badge ${user.account_status === 'approved' ? 'active' : user.account_status === 'pending' ? 'pending' : 'inactive'}">${getAccountStatusText(user.account_status)}</span></td>
+            <td><span class="badge ${user.account_status === 'approved' ? 'active' : user.account_status === 'pending' ? 'pending' : 'inactive'}">${getUserAccountStatusText(user.account_status)}</span></td>
             <td>${user.balance.toFixed(2)} ₽</td>
             <td>${user.tasks_completed}</td>
             <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
@@ -622,7 +622,7 @@
       }
     }
 
-    function getAccountStatusText(status) {
+    function getUserAccountStatusText(status) {
       const statuses = {
         'pending': 'Ожидает',
         'approved': 'Одобрен',
@@ -847,7 +847,7 @@
                 <div class="submission-meta">📅 ${new Date(acc.created_at).toLocaleString('ru-RU')}</div>
                 <div class="submission-meta">🔗 <a href="${acc.account_link}" target="_blank" style="color: var(--primary-blue);">Открыть профиль</a></div>
               </div>
-              <span class="task-status ${acc.status}">${getAccountStatusText(acc.status)}</span>
+              <span class="task-status ${acc.status}">${getWorkAccountStatusText(acc.status)}</span>
             </div>
             
             ${acc.proof_text ? `
@@ -884,7 +884,7 @@
       }
     }
 
-    function getAccountStatusText(status) {
+    function getWorkAccountStatusText(status) {
       const statuses = {
         'pending': 'На проверке',
         'approved': 'Одобрен',
